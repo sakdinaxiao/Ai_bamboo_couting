@@ -6,6 +6,8 @@ def segmenting(model,frame):
     PADDING = 50
 
     seg_results = model(frame, verbose=False,conf=0.25)[0]
+    if seg_results.masks is None:
+        return []
 
     h_img,w_img = frame.shape[:2]
     mask = np.zeros((h_img,w_img), dtype=np.uint8)

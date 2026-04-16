@@ -1,5 +1,6 @@
 from ultralytics import YOLO
 from pathlib import Path
+import torch
 
 project_root = Path(__file__).resolve().parent
 
@@ -9,6 +10,13 @@ output_path = project_root/ f"training_result"
 
 
 model = YOLO("yolo26n.pt")
+
+def get_available_device():
+    if torch.backends.mps.is_available():
+        return "mps"
+    if torch.cuda.is_available():
+        return "cuda"
+    return "cpu"
 
 def training_model(modelname):
     if not data_yaml.exists():
@@ -33,7 +41,7 @@ def training_model(modelname):
         perspective=0.0,
         erasing=0.1, 
 
-        device="mps", #for mac
+        device=get_available_device(),
         patience=50,
         close_mosaic=10
     )

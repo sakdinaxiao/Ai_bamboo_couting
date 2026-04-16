@@ -2,13 +2,22 @@ from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 import numpy as np
 import supervision as sv
+import torch
+
+
+def get_available_device():
+    if torch.backends.mps.is_available():
+        return "mps"
+    if torch.cuda.is_available():
+        return "cuda"
+    return "cpu"
 
 def get_sahi(model):
     return AutoDetectionModel.from_pretrained(
         model_type="yolov11",
         model_path= str(model),
         confidence_threshold=0.25,
-        device="mps"
+        device=get_available_device()
     )
 
 def apply_sahi(model,img):

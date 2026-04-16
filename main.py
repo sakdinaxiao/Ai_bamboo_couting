@@ -4,18 +4,22 @@ from sahi_inference import apply_sahi,get_sahi
 from pathlib import Path
 import cv2
 import supervision as sv
-from bytetrack_inference import get_bytetrack, tracking
+from bytetrack_inference import get_bytetrack, get_counting_zone, tracking
 from segmentation import segmenting
 import numpy as np
+import argparse
 
 project_root = Path(__file__).resolve().parent
 model_path = project_root / "training_result" / "detection_small" / "weights" / "best.pt" 
 seg_model_path = project_root / "training_result" / "segment" / "best.pt"
-seg_model = YOLO(seg_model_path)
+
 #using small YOLO
 
 def main(video):
-    
+    if not seg_model_path.exists():
+        print("Segmentation model path does not exist")
+        return
+    seg_model = YOLO(seg_model_path)
     if not model_path.exists():
         print("Model path does not exist")
         return
@@ -38,10 +42,13 @@ def main(video):
         
         #----- for visual only
         box_annotator = sv.BoxAnnotator()
-        label_annotator = sv.LabelAnnotator()    
+        label_annotator = sv.LabelAnnotator()
+        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        min_x, min_y, max_x, max_y = get_counting_zone((frame_height, frame_width, 3))
         trap_points = np.array([
-            [768, 432], [3072, 432], [3072, 1728], [768, 1728]
-        ])
+            [min_x, min_y], [max_x, min_y], [max_x, max_y], [min_x, max_y]
+        ], dtype=np.int32)
         zone = sv.PolygonZone(polygon=trap_points) 
         zone_annotator = sv.PolygonZoneAnnotator(zone=zone, color=sv.Color(255,0,0), thickness=8)
         #-----
@@ -98,7 +105,12 @@ def main(video):
 
             print(f"Raw YOLO Detections this frame: {len(all_detections_xyxy)}")
 
-            tracked_detections = tracking(final_detections,bytetrack,id_counter)
+            tracked_detections = tracking(
+                final_detections,
+                bytetrack,
+                id_counter,
+                (min_x, min_y, max_x, max_y),
+            )
 
             # -------------------------- Visulization
             labels = [
@@ -138,5 +150,8 @@ def main(video):
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    print(main("video_name_here"))
+    parser = argparse.ArgumentParser(description="Bamboo counter")
+    parser.add_argument("--source", type=str)
+    args = parser.parse_args()
+    print(main(args.source))
     
