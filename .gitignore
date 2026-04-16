@@ -1,0 +1,17 @@
+.env
+venv/
+__pycache__/
+yolo26n.pt
+old_code/
+Counting_dataset/
+Dataset/
+Image_Data/
+.vscode/
+Couting_dataset_Clahe/
+Video/
+scripts/
+DJI_20251106132522_0023_V.MP4
+DJI_20251106132724_0025_V.MP4
+count bammboo.py
+water.mp4
+
