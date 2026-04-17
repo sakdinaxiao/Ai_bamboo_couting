@@ -14,12 +14,6 @@ This repository is still a work in progress. The current goal is to test a pipel
 
 This project is not a polished package yet. It is closer to an experimental repo for model training and inference testing.
 
-What works right now:
-
-- running the main video inference pipeline
-- training a detection model
-- testing a trained model on a test split
-- counting tracked objects inside a counting zone
 
 
 ## Project Files
@@ -63,24 +57,13 @@ python main.py --source water.MP4
 
 The `--source` value should be the video filename or relative path from the project root.
 
-## Training
 
-The training entrypoint is:
-
-```bash
-python train_detect.py
-```
-
-The dataset path is currently expected at:
-
-```text
-Couting_dataset_Clahe/data.yaml
-```
 
 ## Notes
 
 - Device selection now falls back between `mps`, `cuda`, and `cpu`
 - The counting zone is based on the current frame size instead of fixed coordinates
+
 
 ## Limitations
 
