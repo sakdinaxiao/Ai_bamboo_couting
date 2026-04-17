@@ -39,16 +39,19 @@ def main(video):
         sahi = get_sahi(model_path)
         
         bytetrack, id_counter = get_bytetrack()
+        min_x, min_y, max_x, max_y = get_counting_zone((frame_height, frame_width, 3))
         
         #----- for visual only
         box_annotator = sv.BoxAnnotator()
         label_annotator = sv.LabelAnnotator()
+
         frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        min_x, min_y, max_x, max_y = get_counting_zone((frame_height, frame_width, 3))
+        
         trap_points = np.array([
             [min_x, min_y], [max_x, min_y], [max_x, max_y], [min_x, max_y]
         ], dtype=np.int32)
+
         zone = sv.PolygonZone(polygon=trap_points) 
         zone_annotator = sv.PolygonZoneAnnotator(zone=zone, color=sv.Color(255,0,0), thickness=8)
         #-----
