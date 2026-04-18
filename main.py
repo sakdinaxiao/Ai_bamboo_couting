@@ -33,21 +33,23 @@ def main(video):
     if not cap.isOpened():
         print("Can't open video")
         return
+
+    output_path = project_root / f"{source_vid.stem}_tracked_1080p.mp4"
+    video_writer = None
     
     try:
 
         sahi = get_sahi(model_path)
         
         bytetrack, id_counter = get_bytetrack()
+        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         min_x, min_y, max_x, max_y = get_counting_zone((frame_height, frame_width, 3))
         
         #----- for visual only
         box_annotator = sv.BoxAnnotator()
         label_annotator = sv.LabelAnnotator()
 
-        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        
         trap_points = np.array([
             [min_x, min_y], [max_x, min_y], [max_x, max_y], [min_x, max_y]
         ], dtype=np.int32)
@@ -59,6 +61,16 @@ def main(video):
         origin_fps = cap.get(cv2.CAP_PROP_FPS)
         target_fps = 3
         stride = max(1, int(origin_fps/target_fps))
+        output_size = (1920, 1080)
+        
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        video_writer = cv2.VideoWriter(str(output_path), fourcc, target_fps, output_size)
+
+        if not video_writer.isOpened():
+            print("Can't create output video")
+            return
+
+        print(f"Saving output video to: {output_path}")
 
         frame_count = 0
 
@@ -137,6 +149,8 @@ def main(video):
             )
             
             cv2.imshow("Tracking & Counting Debugger", annotated_frame)
+            output_frame = cv2.resize(annotated_frame, output_size, interpolation=cv2.INTER_LINEAR)
+            video_writer.write(output_frame)
 
             if cv2.waitKey(1) == ord('q'):
                 break
@@ -151,6 +165,8 @@ def main(video):
     finally:
         cap.release()
         cv2.destroyAllWindows()
+        if video_writer is not None:
+            video_writer.release()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Bamboo counter")
