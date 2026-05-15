@@ -3,10 +3,10 @@ import numpy as np
 
 def get_bytetrack():
     tracker =  sv.ByteTrack(
-            track_activation_threshold=0.25, 
-            lost_track_buffer=100, 
+            track_activation_threshold=0.25,
+            lost_track_buffer=30,
             minimum_matching_threshold=0.5,
-            minimum_consecutive_frames=1
+            minimum_consecutive_frames=2
 )
     counter = set()
 
@@ -37,6 +37,5 @@ def tracking(detected,bytetrackmodel,counter,counting_zone):
             if (min_x < center_x < max_x) and (min_y < center_y < max_y):
                 counter.add(tracker_id)
 
-    
     
     return track

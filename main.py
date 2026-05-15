@@ -4,10 +4,11 @@ from sahi_inference import apply_sahi,get_sahi
 from pathlib import Path
 import cv2
 import supervision as sv
-from bytetrack_inference import get_bytetrack, get_counting_zone, tracking
+# from bytetrack_inference import get_bytetrack, get_counting_zone, tracking
 from segmentation import segmenting
 import numpy as np
 import argparse
+from global_tracker import GlobalTracker
 
 project_root = Path(__file__).resolve().parent
 model_path = project_root / "training_result" / "detection_small" / "weights" / "best.pt" 
@@ -40,22 +41,16 @@ def main(video):
     try:
 
         sahi = get_sahi(model_path)
-        
-        bytetrack, id_counter = get_bytetrack()
-        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        min_x, min_y, max_x, max_y = get_counting_zone((frame_height, frame_width, 3))
+
+        tracker = GlobalTracker(merge_distance=12.5)
+        # bytetrack, id_counter = get_bytetrack()
+        # frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        # frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        # min_x, min_y, max_x, max_y = get_counting_zone((frame_height, frame_width, 3))
         
         #----- for visual only
         box_annotator = sv.BoxAnnotator()
         label_annotator = sv.LabelAnnotator()
-
-        trap_points = np.array([
-            [min_x, min_y], [max_x, min_y], [max_x, max_y], [min_x, max_y]
-        ], dtype=np.int32)
-
-        zone = sv.PolygonZone(polygon=trap_points) 
-        zone_annotator = sv.PolygonZoneAnnotator(zone=zone, color=sv.Color(255,0,0), thickness=8)
         #-----
 
         origin_fps = cap.get(cv2.CAP_PROP_FPS)
@@ -83,8 +78,10 @@ def main(video):
 
             if frame_count % stride != 0:
                 continue
-            
+
+
             regions = segmenting(seg_model,frame)
+            frame = apply_clahe(frame=frame)
             all_detections_xyxy = []
             all_confidence = []
             all_class_ids=[]
@@ -94,8 +91,8 @@ def main(video):
                 offset_x = region["offset_x"]
                 offset_y = region["offset_y"]
 
-                img = apply_clahe(frame=reg_img)
-                detected = apply_sahi(sahi,img)
+                reg_img = apply_clahe(reg_img)
+                detected = apply_sahi(sahi,reg_img)
 
                 if not detected.is_empty():
                     for i in range(len(detected.xyxy)):
@@ -120,27 +117,21 @@ def main(video):
 
             print(f"Raw YOLO Detections this frame: {len(all_detections_xyxy)}")
 
-            tracked_detections = tracking(
-                final_detections,
-                bytetrack,
-                id_counter,
-                (min_x, min_y, max_x, max_y),
-            )
+            tracker.update(frame,final_detections)
+            # tracked_detections = tracking(
+            #     final_detections,
+            #     bytetrack,
+            #     id_counter,
+            #     (min_x, min_y, max_x, max_y),
+            # )
 
             # -------------------------- Visulization
-            labels = [
-                f"#{tracker_id}"
-                for tracker_id in tracked_detections.tracker_id
-            ] if tracked_detections.tracker_id is not None else []
 
             annotated_frame = frame.copy()
-            annotated_frame = box_annotator.annotate(scene=annotated_frame, detections=tracked_detections)
-            annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=tracked_detections, labels=labels)
-            annotated_frame = zone_annotator.annotate(scene=annotated_frame)
-            
+            annotated_frame = box_annotator.annotate(scene=annotated_frame, detections=final_detections)
             cv2.putText(
                 annotated_frame,
-                f"Total Counted: {len(id_counter)}",
+                f"Total Counted: {tracker.count()}",
                 (40, 70), 
                 cv2.FONT_HERSHEY_SIMPLEX,
                 2.0, 
@@ -157,7 +148,7 @@ def main(video):
             
             # ---------------------------
         
-        return len(id_counter)
+        return tracker.count()
     
     except Exception as e:
         print(f"Error {e}")

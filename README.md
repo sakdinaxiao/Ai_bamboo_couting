@@ -6,7 +6,7 @@ This repository is still a work in progress. The current goal is to test a pipel
 
 - YOLO-based segmentation
 - SAHI sliced detection
-- ByteTrack-based tracking
+- Camera-motion-compensated counting via GlobalTracker
 - CLAHE image enhancement
 
 
@@ -21,7 +21,7 @@ This project is not a polished package yet. It is closer to an experimental repo
 - [main.py](/Users/jacky/bamboo_ai/main.py) runs the main inference and counting pipeline on a video
 - [segmentation.py](/Users/jacky/bamboo_ai/segmentation.py) extracts segmentation regions used before detection
 - [sahi_inference.py](/Users/jacky/bamboo_ai/sahi_inference.py) runs sliced object detection with SAHI
-- [bytetrack_inference.py](/Users/jacky/bamboo_ai/bytetrack_inference.py) tracks detections and counts unique IDs
+- [global_tracker.py](/Users/jacky/bamboo_ai/global_tracker.py) accumulates detections in a global coordinate map and counts unique bamboo
 - [clahe_inference.py](/Users/jacky/bamboo_ai/clahe_inference.py) applies CLAHE image enhancement
 - [train_detect.py](/Users/jacky/bamboo_ai/train_detect.py) trains and evaluates the detection model
 
@@ -59,10 +59,22 @@ The `--source` value should be the video filename or relative path from the proj
 
 
 
+## How counting works
+
+Rather than tracking objects frame-to-frame with IDs, the pipeline uses a global spatial map:
+
+1. **Camera registration** — ORB features are matched between consecutive frames and `estimateAffinePartial2D` (RANSAC) estimates the camera motion.
+2. **Global coordinate mapping** — each detection center is projected into a global coordinate space that cancels out camera movement, so bamboo that stays stationary in the real world maps to the same point across frames.
+3. **Spatial deduplication** — a cKDTree checks every new detection against existing map points. Points within `merge_distance` pixels update the existing anchor (centroid averaging); points farther away are added as new entries.
+4. **Count** — `len(map)` at the end is the total number of unique bamboo seen across the whole video.
+
+This approach works well for overhead drone video with a slowly panning camera and densely packed bamboo, where ID-based trackers struggle with occlusion and scale.
+
+
 ## Notes
 
-- Device selection now falls back between `mps`, `cuda`, and `cpu`
-- The counting zone is based on the current frame size instead of fixed coordinates
+- Device selection falls back between `mps`, `cuda`, and `cpu`
+- Output video is saved as `<input_stem>_tracked_1080p.mp4` in the project root
 
 
 ## Limitations
