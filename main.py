@@ -163,5 +163,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Bamboo counter")
     parser.add_argument("--source", type=str)
     args = parser.parse_args()
-    print(main(args.source))
+    print(f"This video have {main(args.source)} bamboos")
     

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from scipy.spatial import cKDTree
 
-# RANSAC in estimateAffinePartial2D is randomised; seed it so counts are reproducible
+
 cv2.setRNGSeed(42)
 
 class GlobalTracker:
@@ -101,7 +101,7 @@ class GlobalTracker:
             dist, idx = tree.query([px, py])
             if dist <= self.merge_distance:
                 # nudge the anchor toward the new observation so it follows
-                # slow registration drift instead of spawning a duplicate
+                
                 ox, oy = self.map[idx]
                 self.map[idx] = [
                     (1 - update_rate) * ox + update_rate * px,
